@@ -6,6 +6,7 @@ class StreamRecComponent(ABC):
         self.name = ""
         self.config = {}
         self.description = ""
+        self.type = ""
     
     def get_meta(self):
 
@@ -52,3 +53,4 @@ class DataCleaner(StreamRecComponent):
     def _feature_creation(self):
         pass
 
+ 
