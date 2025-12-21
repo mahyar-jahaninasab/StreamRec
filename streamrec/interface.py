@@ -7,50 +7,66 @@ class StreamRecComponent(ABC):
         self.config = {}
         self.description = ""
         self.type = ""
-    
+        
     def get_meta(self):
-
-        #1 get it from internet
-        #have it
-        #get it from the parent class
-        pass
+        return {
+            "name": self.name,
+            "description": self.description,
+            "type": self.type,
+            "config": self.config
+        }
 
 
 class DataCollector(StreamRecComponent):
     def __init__(self):
         super().__init__()
-        self.name = "HuggingFaceDataCollector"
-        self.description = "Collect dataset from ready to collect databses in Hugging Face"
+        self.name = "DataCollector"
+        self.description = "Collect dataset from ready to collect databses"
     
     @abstractmethod
-    def request(self):
+    async def request(self):
         pass
 
     @abstractmethod
-    def to_paraquet(self):
+    async def to_paraquet(self):
         pass 
 
 
 class DataCleaner(StreamRecComponent):
     def __init__(self):
         super().__init__()
-        self.name = "Handling data in parallel using PySpark"
+        self.name = "DataCleaner"
         self.description = "Cleaning Data and turning it into datalake"
     
     @abstractmethod
-    def to_datalake(self):
+    async def to_datalake(self):
         pass
 
     @abstractmethod
-    def transform(self):
+    async def transform(self):
         pass
 
     @abstractmethod
-    def _filter(self):
+    async def _filter(self):
         pass 
 
     @abstractmethod
-    def _feature_creation(self):
+    async def _feature_creation(self):
         pass
+
+
+
+class UploadDoc(StreamRecComponent):
+    def __init__(self):
+        super().__init__()
+        self.name = "UploadDocument"
+        self.description = "Get the document from the users"
+    
+    @abstractmethod
+    async def upload_doc(self):
+        pass 
+
+
+
 
  

@@ -12,10 +12,10 @@ class HuggingFaceCollector(DataCollector):
                                                     description="Collect dataset from Hugging Face Hub",
                                                     href="https://huggingface.co/datasets"
                                                     )
-    def request(self):
+    async def request(self):
         pass 
 
-    def to_paraquet(self):
+    async def to_paraquet(self):
         pass 
 
 
