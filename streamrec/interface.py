@@ -27,10 +27,6 @@ class DataCollector(StreamRecComponent):
     async def request(self):
         pass
 
-    @abstractmethod
-    async def to_paraquet(self):
-        pass 
-
 
 class DataCleaner(StreamRecComponent):
     def __init__(self):

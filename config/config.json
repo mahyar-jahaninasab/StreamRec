@@ -1,7 +1,7 @@
 {   
     "STREAMREC":{
         "DATA" : {
-            "DATASETS":["cardiffnlp/tweet_eval"]
+            "DATASETS":["moremilk/CoT_Medical_Diagnosis"]
 
 
 
