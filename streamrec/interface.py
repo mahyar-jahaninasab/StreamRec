@@ -35,31 +35,22 @@ class DataCleaner(StreamRecComponent):
         self.description = "Cleaning Data and turning it into datalake"
     
     @abstractmethod
-    async def to_datalake(self):
+    async def _extract_content(self, data):
+        # extracting the content based on the specific type of the file 
         pass
-
     @abstractmethod
-    async def transform(self):
-        pass
-
-    @abstractmethod
-    async def _filter(self):
+    async def _universal_sanitize(self, data):
+        # Security Layer for prompt injection, Null Bytes, PII, invisable character, token limit, etc
         pass 
 
-    @abstractmethod
-    async def _feature_creation(self):
-        pass
-
-
-
-class UploadDoc(StreamRecComponent):
+class Reader(StreamRecComponent):
     def __init__(self):
         super().__init__()
         self.name = "UploadDocument"
         self.description = "Get the document from the users"
     
     @abstractmethod
-    async def upload_doc(self):
+    async def upload_docs(self):
         pass 
 
 
