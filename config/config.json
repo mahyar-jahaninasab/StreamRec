@@ -17,6 +17,13 @@
                     "doc": "application/msword",
                     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 }
+            },
+            "parse":{
+                "category": {
+                    "small":5000000,
+                    "medium":10000000,
+                    "big": 40000000
+                }
             }
         }
     }

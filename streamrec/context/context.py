@@ -33,11 +33,47 @@ class HuggingFaceCollector(DataCollector):
     
 class CleanData(DataCleaner):
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, 
+                 config: Dict[str, Any]):
+        
         super().__init__()
         self.config = config
 
-    async def _validate(self, data: Dict[str, Any]) -> None:
+
+    async def pipeline(self, 
+                       data: Dict[str, Any]) -> Dict[str, Any]:
+        
+        await self._validate(data)
+        await self.parse_data()
+        return None 
+    
+
+    async def parse_data(self, data: Dict[str, Any]) -> Dict[str, Any]: 
+        content = data.get('content', b'')
+        category = self._get_size_category(content)
+        match category:
+            case "small": 
+                await self.parse_small(content)
+            case "medium":
+                await self.parse_medium(content)
+            case "large": 
+                await self.parse_large(content)
+            case _: 
+                raise ValueError(f"Unknown category: {category}")
+        return data  
+
+    async def parse_small(self, content: str): 
+        pass 
+
+    async def parse_medium(self, content: str): 
+        pass 
+
+    async def parse_large(self, content: str): 
+        pass 
+
+    async def _validate(self, 
+                        data: Dict[str, Any]) -> None:
+        
         content = data.get('content', b'')
         metadata = data.get('metadata', {})
         self._validate_structure(metadata)
@@ -45,8 +81,10 @@ class CleanData(DataCleaner):
         self._validate_filename(metadata.get('file_name', ''))
         self._validate_file_type(content, metadata.get('type', ''))
         self._validate_metadata(metadata)
-
-    def _validate_structure(self, metadata: Dict) -> None:
+    
+    def _validate_structure(self, 
+                            metadata: Dict) -> None:
+        
         if len(metadata) == 0:
             raise ValueError("All the fields for the meta data is missing")
         required_keys = self.config["metadata"]["required_keys"]  # set 
@@ -54,14 +92,18 @@ class CleanData(DataCleaner):
             missing = required_keys - metadata.keys()
             raise ValueError(f"Missing metadata fields: {missing}")
 
-    def _validate_size(self, content: bytes) -> None:
+    def _validate_size(self, 
+                       content: bytes) -> None:
+        
         file_size = len(content) 
         if file_size == 0: 
             raise ValueError("Empty file is not allowed")
         if file_size > self.config["limits"]["max_file_size"]:
             raise ValueError(f"File size {file_size} exceeds {self.config['limits']['max_file_size']} bytes")
 
-    def _validate_filename(self, filename: str) -> None:
+    def _validate_filename(self, 
+                           filename: str) -> None:
+        
         pattern = r"^[a-zA-Z0-9_.-]+$"
         if not filename:
             raise ValueError("Filename must be provided")
@@ -75,7 +117,10 @@ class CleanData(DataCleaner):
         if '..' in filename or '/' in filename or '\\' in filename:
             raise ValueError("File name contains path traversal patterns")
 
-    def _validate_file_type(self, content: bytes, claimed_type: str) -> None:
+    def _validate_file_type(self, 
+                            content: bytes, 
+                            claimed_type: str) -> None:
+        
         buffer_size = min(self.config["limits"]["buffer_size"], len(content))
         extension = claimed_type.lstrip('.')
         if not extension in self.config["allowed_types"]:
@@ -88,7 +133,21 @@ class CleanData(DataCleaner):
                 f"but detected '{detected_mime}'"
             )       
         
-    def _validate_metadata(self, metadata: Dict) -> None:
+    def _validate_metadata(self, 
+                           metadata: Dict) -> None:
+        
         if len(metadata) > self.config['limits']['max_metadata_fields']:
             raise ValueError(f"Too many metadata fields (max {self.config['limits']['max_metadata_fields']})")
+        
+    def _get_size_category(self, content: str) -> str: 
 
+        categorization = self.config["parse"]["category"]
+        size_mb = len(content)
+        if size_mb <= 0: 
+            raise ValueError("Empty files are not allowed")
+        if size_mb <= categorization["small"]:
+            return "small"
+        elif size_mb <= categorization["medium"]:
+            return "medium"       
+        else:
+            return "large"
