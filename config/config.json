@@ -1,11 +1,23 @@
 {   
-    "STREAMREC":{
-        "DATA" : {
-            "DATASETS":["moremilk/CoT_Medical_Diagnosis"]
-
-
-
-}
-
+    "STREAMREC": {
+        "DATA": {
+            "DATASETS": ["moremilk/CoT_Medical_Diagnosis"],
+            "VALIDATION": {
+                "limits": {
+                    "max_file_size": 50000000, 
+                    "max_filename_length": 255,
+                    "max_metadata_fields": 10,
+                    "buffer_size": 2048
+                },
+                "metadata": {
+                    "required_keys": ["type", "file_name", "size_bytes"]
+                },
+                "allowed_types": {
+                    "pdf": "application/pdf",
+                    "doc": "application/msword",
+                    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                }
+            }
+        }
     }
 }

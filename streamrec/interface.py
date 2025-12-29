@@ -33,10 +33,9 @@ class DataCleaner(StreamRecComponent):
         super().__init__()
         self.name = "DataCleaner"
         self.description = "Cleaning Data and turning it into datalake"
-    
     @abstractmethod
-    async def _extract_content(self, data):
-        # extracting the content based on the specific type of the file 
+    async def _validate(self, data):
+        # validating files before doing any operation on them
         pass
     @abstractmethod
     async def _universal_sanitize(self, data):
