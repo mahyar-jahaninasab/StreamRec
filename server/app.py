@@ -26,13 +26,12 @@ async def upload_document(uploaded_file: UploadFile = File(...)):
         "content_type": uploaded_file.content_type,
         "size_bytes": uploaded_file.size
     }
-    cleaner = CleanData(CONFIG["STREAMREC"]["DATA"]["VALIDATION"])
+    cleaner = CleanData(CONFIG)
     try:
         result = await cleaner.pipeline({
             "file": uploaded_file,
             "metadata": metadata
         })
-        print(result)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

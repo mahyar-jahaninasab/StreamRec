@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
+from typing import Any, Dict
 
 class StreamRecComponent(ABC):
 
-    def __init__(self):
-        self.name = ""
-        self.config = {}
-        self.description = ""
+    def __init__(self, config: Dict[str, Any]):
+        self.name = "STREAMREC"
+        self.config = config[self.name]
+        self.description = f""
         self.type = ""
         
     def get_meta(self):
@@ -20,19 +21,23 @@ class StreamRecComponent(ABC):
 class DataCollector(StreamRecComponent):
     def __init__(self):
         super().__init__()
-        self.name = "DataCollector"
-        self.description = "Collect dataset from ready to collect databses"
+        self.name = f"DataCollector"
+        self.description = f"Collect dataset from ready to collect databses"
+        parent_config = self.config
+        self.config  = parent_config[self.name]
     
     @abstractmethod
     async def request(self):
         pass
 
 
-class DataCleaner(StreamRecComponent):
-    def __init__(self):
-        super().__init__()
-        self.name = "DataCleaner"
-        self.description = "Cleaning Data and turning it into datalake"
+class Preprocessing(StreamRecComponent):
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.name = "Preprocessing"
+        self.description += f"Cleaning Data and turning it into datalake"
+        parent_config = self.config
+        self.config = parent_config[self.name]
     @abstractmethod
     async def _validate(self, data):
         # validating files before doing any operation on them
@@ -47,15 +52,6 @@ class DataCleaner(StreamRecComponent):
         # Security Layer for prompt injection, Null Bytes, PII, invisable character, token limit, etc
         pass 
 
-class Reader(StreamRecComponent):
-    def __init__(self):
-        super().__init__()
-        self.name = "UploadDocument"
-        self.description = "Get the document from the users"
-    
-    @abstractmethod
-    async def upload_docs(self):
-        pass 
 
 
 

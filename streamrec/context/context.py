@@ -1,47 +1,24 @@
 import asyncio
 import io
 import re
-import aiofiles
-from typing import Any, Dict, Union
-from streamrec.interface import DataCleaner, DataCollector,Reader
+from typing import Any, Dict
+from streamrec.interface import Preprocessing, DataCollector
 from streamrec.types import DataCollectorConfig
-import aiohttp
 from datasets import load_dataset
 import magic
-from pypdf import PdfReader
-from fastapi import UploadFile
 
 
-class HuggingFaceCollector(DataCollector):
-    def __init__(self, config:dict[str, Union[list, int]]):
-        super().__init__()
-        self.config["Source"] = DataCollectorConfig(
-                                                    type="HuggingFace",
-                                                    value="dataset",
-                                                    description="Collect dataset from Hugging Face Hub",
-                                                    href="https://huggingface.com/datasets"
-                                                    )
-        self.links = config["address"]
-        self._semaphore = asyncio.Semaphore(config['limit'])
     
-    async def request(self):
-        async with self._semaphore:
-            loop = asyncio.get_event_loop()
-            dataset = await loop.run_in_executor(
-                None,
-                load_dataset,
-                self.links 
-            )
-            data = [item for item in dataset]
-        return data 
-    
-class CleanData(DataCleaner):
+class CleanData(Preprocessing):
 
     def __init__(self, 
                  config: Dict[str, Any]):
         
-        super().__init__()
-        self.config = config
+        super().__init__(config)
+
+        self.name = "CleanData"
+        parent_config = self.config
+        self.config = parent_config[self.name]
 
 
     async def pipeline(self, 
@@ -57,7 +34,6 @@ class CleanData(DataCleaner):
     async def _validate(self, 
                         content:bytes,
                         metadata: Dict[str, Any]) -> None:
-        
         self._validate_structure(metadata)
         self._validate_size(content)
         self._validate_filename(metadata.get('file_name', ''))
@@ -115,6 +91,7 @@ class CleanData(DataCleaner):
         if not required_keys.issubset(provided_keys):
             missing = required_keys - provided_keys
             raise ValueError(f"Missing metadata fields: {missing}")
+        
     def _validate_size(self, 
                        content: bytes) -> None:
         
@@ -130,10 +107,8 @@ class CleanData(DataCleaner):
         pattern = r"^[a-zA-Z0-9_.-]+$"
         if not filename:
             raise ValueError("Filename must be provided")
-        
         if len(filename) > self.config["limits"]["max_filename_length"]:
             raise ValueError(f"File name must not exceed {self.config['limits']['max_filename_length']} characters")
-        
         if not re.fullmatch(pattern, filename):
             raise ValueError("Filename contains invalid characters")
         
@@ -162,6 +137,31 @@ class CleanData(DataCleaner):
         if len(metadata) > self.config['limits']['max_metadata_fields']:
             raise ValueError(f"Too many metadata fields (max {self.config['limits']['max_metadata_fields']})")
         
-    
     async def _universal_sanitize(self, data):
         return None
+    
+class HuggingFaceCollector(DataCollector):
+    def __init__(self, config:Dict[str, Any]):
+        super().__init__()
+        self.config["Source"] = DataCollectorConfig(
+                                                    type="HuggingFace",
+                                                    value="dataset",
+                                                    description="Collect dataset from Hugging Face Hub",
+                                                    href="https://huggingface.com/datasets"
+                                                    )
+        self.links = config["address"]
+        self._semaphore = asyncio.Semaphore(config['limit'])
+    
+    async def request(self):
+        try:
+            async with self._semaphore:
+                loop = asyncio.get_event_loop()
+                dataset = await loop.run_in_executor(
+                    None,
+                    load_dataset,
+                    self.links 
+                )
+                data = [item for item in dataset]
+        except Exception as e:
+            raise e
+        return data 

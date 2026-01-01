@@ -1,8 +1,11 @@
 {   
     "STREAMREC": {
-        "DATA": {
-            "DATASETS": ["moremilk/CoT_Medical_Diagnosis"],
-            "VALIDATION": {
+        "DataCollector": {
+            "address":["moremilk/CoT_Medical_Diagnosis"]
+        },
+
+        "Preprocessing": {
+            "CleanData": {
                 "limits": {
                     "max_file_size": 50000000, 
                     "max_filename_length": 255,
