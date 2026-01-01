@@ -15,12 +15,13 @@
                 "allowed_types": {
                     "pdf": "application/pdf",
                     "doc": "application/msword",
-                    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "txt": "text/plain"
                 }
             },
             "parse":{
                 "category": {
-                    "small":5000000,
+                    "small":1000000,
                     "medium":10000000,
                     "big": 40000000
                 }

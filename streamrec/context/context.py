@@ -1,4 +1,5 @@
 import asyncio
+import io
 import re
 import aiofiles
 from typing import Any, Dict, Union
@@ -7,6 +8,9 @@ from streamrec.types import DataCollectorConfig
 import aiohttp
 from datasets import load_dataset
 import magic
+from pypdf import PdfReader
+from fastapi import UploadFile
+
 
 class HuggingFaceCollector(DataCollector):
     def __init__(self, config:dict[str, Union[list, int]]):
@@ -42,56 +46,75 @@ class CleanData(DataCleaner):
 
     async def pipeline(self, 
                        data: Dict[str, Any]) -> Dict[str, Any]:
-        
-        await self._validate(data)
-        await self.parse_data()
-        return None 
-    
-
-    async def parse_data(self, data: Dict[str, Any]) -> Dict[str, Any]: 
-        content = data.get('content', b'')
-        category = self._get_size_category(content)
-        match category:
-            case "small": 
-                await self.parse_small(content)
-            case "medium":
-                await self.parse_medium(content)
-            case "large": 
-                await self.parse_large(content)
-            case _: 
-                raise ValueError(f"Unknown category: {category}")
-        return data  
-
-    async def parse_small(self, content: str): 
-        pass 
-
-    async def parse_medium(self, content: str): 
-        pass 
-
-    async def parse_large(self, content: str): 
-        pass 
-
-    async def _validate(self, 
-                        data: Dict[str, Any]) -> None:
-        
-        content = data.get('content', b'')
+        uploaded_file = data.get('file')
         metadata = data.get('metadata', {})
+        content = await uploaded_file.read()
+        metadata['size'] = len(content)
+        await self._validate(content, metadata)
+        result = await self.parse_data(content, metadata)
+        return result 
+    
+    async def _validate(self, 
+                        content:bytes,
+                        metadata: Dict[str, Any]) -> None:
+        
         self._validate_structure(metadata)
         self._validate_size(content)
         self._validate_filename(metadata.get('file_name', ''))
         self._validate_file_type(content, metadata.get('type', ''))
-        self._validate_metadata(metadata)
+        self._validate_metadata(metadata)    
+    
+    async def parse_data(self,
+                         content:bytes,
+                         metadata: Dict[str, Any]) -> Dict[str, Any]:
+        file_type = metadata.get('type', '').lstrip('.')
+        extracted_data = await self._extract_content(content, file_type)
+        return {
+            "text": extracted_data,
+            "metadata": metadata, 
+            "status": "success"
+            }
+
+        
+    async def _extract_content(self, content: bytes, file_type: str) -> str:
+        if file_type == "pdf":
+            return await self.parse_pdf(content)
+        elif file_type == "txt":
+            return content.decode('utf-8')
+        elif file_type in ["doc", "docx"]:
+            return await self.load_docx_file(content)
+        else:
+            raise ValueError(f"Unsupported file type: {file_type}")
+
+    async def parse_pdf(self, 
+                        file_stream: bytes):
+        try:
+            from pypdf import PdfReader
+        except ImportError:
+            raise ImportError("PDF support is not installed.")
+        pdf_bytes = io.BytesIO(file_stream)
+        reader = PdfReader(pdf_bytes)
+        return "\n\n".join(page.extract_text() for page in reader.pages) 
+
+    async def load_docx_file(self, 
+                             file_stream: bytes):
+        try:
+            import docx
+        except ImportError:
+            raise ImportError("Docx support is not installed")
+        docx_bytes = io.BytesIO(file_stream)
+        reader = docx.Document(docx_bytes)
+        return "\n\n".join(pargraph.text for pargraph in reader.paragraphs)
     
     def _validate_structure(self, 
                             metadata: Dict) -> None:
         
-        if len(metadata) == 0:
-            raise ValueError("All the fields for the meta data is missing")
-        required_keys = self.config["metadata"]["required_keys"]  # set 
-        if not required_keys.issubset(metadata.keys()):
-            missing = required_keys - metadata.keys()
+        required_keys = self.config["metadata"]["required_keys"]
+        required_keys = set(required_keys)
+        provided_keys = set(metadata.keys())
+        if not required_keys.issubset(provided_keys):
+            missing = required_keys - provided_keys
             raise ValueError(f"Missing metadata fields: {missing}")
-
     def _validate_size(self, 
                        content: bytes) -> None:
         
@@ -139,15 +162,6 @@ class CleanData(DataCleaner):
         if len(metadata) > self.config['limits']['max_metadata_fields']:
             raise ValueError(f"Too many metadata fields (max {self.config['limits']['max_metadata_fields']})")
         
-    def _get_size_category(self, content: str) -> str: 
-
-        categorization = self.config["parse"]["category"]
-        size_mb = len(content)
-        if size_mb <= 0: 
-            raise ValueError("Empty files are not allowed")
-        if size_mb <= categorization["small"]:
-            return "small"
-        elif size_mb <= categorization["medium"]:
-            return "medium"       
-        else:
-            return "large"
+    
+    async def _universal_sanitize(self, data):
+        return None

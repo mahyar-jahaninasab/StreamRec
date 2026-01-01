@@ -38,6 +38,11 @@ class DataCleaner(StreamRecComponent):
         # validating files before doing any operation on them
         pass
     @abstractmethod
+    async def parse_data(self, data):
+        # parsing data
+        pass
+
+    @abstractmethod
     async def _universal_sanitize(self, data):
         # Security Layer for prompt injection, Null Bytes, PII, invisable character, token limit, etc
         pass 
