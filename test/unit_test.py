@@ -1,5 +1,5 @@
 import pytest 
-from streamrec.context.context import HuggingFaceCollector
+from streamrec.context.reader import HuggingFaceCollector
 
 
 @pytest.mark.asyncio

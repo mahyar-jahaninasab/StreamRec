@@ -5,12 +5,13 @@
         },
 
         "Preprocessing": {
-            "CleanData": {
+            "Reader": {
                 "limits": {
                     "max_file_size": 50000000, 
                     "max_filename_length": 255,
                     "max_metadata_fields": 10,
-                    "buffer_size": 2048
+                    "buffer_size": 2048,
+                    "similiarity_threshold": 75
                 },
                 "metadata": {
                     "required_keys": ["type", "file_name", "size_bytes"]
@@ -28,6 +29,9 @@
                     "medium":10000000,
                     "big": 40000000
                 }
+            },
+            "Cleaner": {
+
             }
         }
     }

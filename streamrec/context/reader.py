@@ -2,23 +2,27 @@ import asyncio
 import io
 import re
 from typing import Any, Dict
+from streamrec.context.cleaner import Cleaner
 from streamrec.interface import Preprocessing, DataCollector
 from streamrec.types import DataCollectorConfig
 from datasets import load_dataset
 import magic
+from difflib import SequenceMatcher
+from fuzzywuzzy import fuzz
 
 
     
-class CleanData(Preprocessing):
+class Reader(Preprocessing):
 
     def __init__(self, 
                  config: Dict[str, Any]):
         
         super().__init__(config)
 
-        self.name = "CleanData"
+        self.name = "Reader"
         parent_config = self.config
         self.config = parent_config[self.name]
+        self.cleaners = Cleaner(config)
 
 
     async def pipeline(self, 
@@ -51,7 +55,6 @@ class CleanData(Preprocessing):
             "status": "success"
             }
 
-        
     async def _extract_content(self, content: bytes, file_type: str) -> str:
         if file_type == "pdf":
             return await self.parse_pdf(content)
@@ -63,24 +66,67 @@ class CleanData(Preprocessing):
             raise ValueError(f"Unsupported file type: {file_type}")
 
     async def parse_pdf(self, 
-                        file_stream: bytes):
+                        file_stream: bytes) -> str:
         try:
             from pypdf import PdfReader
         except ImportError:
             raise ImportError("PDF support is not installed.")
         pdf_bytes = io.BytesIO(file_stream)
         reader = PdfReader(pdf_bytes)
-        return "\n\n".join(page.extract_text() for page in reader.pages) 
+        pages = [page.extract_text() for page in reader.pages]
+        clean_pages = []
+        SIMILARITY_THRESHOLD = self.config["limits"]["similiarity_threshold"]
+        
+        for i, page in enumerate(pages):
+            if not page.strip():
+                continue
+            
+            lines = page.strip().split('\n')
+            content_lines = lines[:]
+            if i > 0 and lines:
+                prev_first_line = pages[i-1].strip().split('\n')[0].strip()
+                current_first_line = lines[0].strip()
+                similarity = fuzz.token_set_ratio(prev_first_line, current_first_line)
+                
+                if similarity > SIMILARITY_THRESHOLD:
+                    content_lines = content_lines[1:]
+            if i < len(pages) - 1 and content_lines:
+                next_lines = pages[i+1].strip().split('\n')
+                if next_lines:
+                    next_last_line = next_lines[-1].strip()
+                    current_last_line = content_lines[-1].strip()
+                    similarity = fuzz.token_set_ratio(next_last_line, current_last_line)
+                    if similarity > SIMILARITY_THRESHOLD:
+                        content_lines = content_lines[:-1]
+
+            if content_lines:
+                content_lines = self.cleaners.pipeline(content_lines)  
+                clean_pages.append('\n'.join(content_lines))
+            
+        return clean_pages
+
 
     async def load_docx_file(self, 
-                             file_stream: bytes):
+                             file_stream: bytes) -> str:
         try:
             import docx
         except ImportError:
             raise ImportError("Docx support is not installed")
+        
         docx_bytes = io.BytesIO(file_stream)
         reader = docx.Document(docx_bytes)
-        return "\n\n".join(pargraph.text for pargraph in reader.paragraphs)
+
+        for section in reader.sections:
+            section.header.is_linked_to_previous = False
+            section.footer.is_linked_to_previous = False 
+
+            for paragraph in section.header.paragraphs:
+                paragraph.clear()
+
+            for paragraph in section.footer.paragraphs:
+                paragraph.clear()
+        main_text = "\n\n".join(self.cleaners.pipeline(p.text) for p in reader.paragraphs if p.text.strip())
+        return main_text
     
     def _validate_structure(self, 
                             metadata: Dict) -> None:
@@ -111,7 +157,6 @@ class CleanData(Preprocessing):
             raise ValueError(f"File name must not exceed {self.config['limits']['max_filename_length']} characters")
         if not re.fullmatch(pattern, filename):
             raise ValueError("Filename contains invalid characters")
-        
         if '..' in filename or '/' in filename or '\\' in filename:
             raise ValueError("File name contains path traversal patterns")
 
@@ -136,9 +181,6 @@ class CleanData(Preprocessing):
         
         if len(metadata) > self.config['limits']['max_metadata_fields']:
             raise ValueError(f"Too many metadata fields (max {self.config['limits']['max_metadata_fields']})")
-        
-    async def _universal_sanitize(self, data):
-        return None
     
 class HuggingFaceCollector(DataCollector):
     def __init__(self, config:Dict[str, Any]):
@@ -165,3 +207,6 @@ class HuggingFaceCollector(DataCollector):
         except Exception as e:
             raise e
         return data 
+    
+
+

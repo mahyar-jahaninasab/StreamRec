@@ -39,18 +39,14 @@ class Preprocessing(StreamRecComponent):
         parent_config = self.config
         self.config = parent_config[self.name]
     @abstractmethod
-    async def _validate(self, data):
+    async def pipeline(self, data):
         # validating files before doing any operation on them
         pass
     @abstractmethod
-    async def parse_data(self, data):
+    async def _validate(self, data):
         # parsing data
         pass
 
-    @abstractmethod
-    async def _universal_sanitize(self, data):
-        # Security Layer for prompt injection, Null Bytes, PII, invisable character, token limit, etc
-        pass 
 
 
 

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from typing import Dict, Any
 
-from streamrec.context.context import CleanData
+from streamrec.context.reader import Reader
 
 load_dotenv()
 
@@ -26,12 +26,13 @@ async def upload_document(uploaded_file: UploadFile = File(...)):
         "content_type": uploaded_file.content_type,
         "size_bytes": uploaded_file.size
     }
-    cleaner = CleanData(CONFIG)
+    cleaner = Reader(CONFIG)
     try:
         result = await cleaner.pipeline({
             "file": uploaded_file,
             "metadata": metadata
         })
+        print(type(result["text"]))
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
