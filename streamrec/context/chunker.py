@@ -1,12 +1,14 @@
+import unicodedata
 from streamrec.interface import Preprocessing
 import re 
-# example from langchain documentation
-# from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+# example from langchain documentation-
+# from langchain_text_splitters import RecursiveCharacterTextSplitter
+# 
 # # Load example document
 # with open("state_of_the_union.txt") as f:
 #     state_of_the_union = f.read()
-
+# 
 # text_splitter = RecursiveCharacterTextSplitter(
 #     chunk_size=100,
 #     chunk_overlap=20,
@@ -18,10 +20,10 @@ import re
 # print(texts[1])
 
 
-class Cleaner(Preprocessing):
+class Chunker(Preprocessing):
     def __init__(self, config):
         super().__init__(config)
-        self.name = "Cleaner"
+        self.name = "Chunker"
         parent_config = self.config
         self.config = parent_config[self.name]
     
@@ -38,32 +40,33 @@ class Cleaner(Preprocessing):
         # exact and near duplicate
         # give each chunk some meta data 
 
-
         pass
 
-    async def _validate(self, data: str):
+    async def _validate(self, content: str):
         pass
 
-    async def frequncey_analysis(self, content: str):
+    async def chunker(self, content: str):
+        chunking_strategy = self.config["strategy"]
         pass
 
-    async def _useless_content(self, data:str):
-        # ASCII control characters, an unsuall long word, bad charachters
-        pattern = r"[\x00-\x1F\x7F]"  
+    async def _useless_content(self, content:str):
+        if not content:
+            return "" 
+        pattern = r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'
+        content = re.sub(pattern,'',content)
+        content = content.replace('\ufffd', '')
+        content = unicodedata.normalize('NFKC', content)
+        content = re.sub(r'[ \t]+', ' ', content)
+        content = re.sub(r'\n{3,}', '\n\n', content)
+        return content.strip()
 
-        pattern = r""
-        pass 
-    
-    async def _remove_reptition(self, data:str):
-        #step 1 find out is there a character that is repeated more than three times and if yes delete replace it with white space
-        #step 2 if a word has unusuall length delete it 
-        pattern = r""
+    async def _ocr_noise(self, content:str):
+        if not content:
+            return ""
+        content = re.sub(r'(?<=[a-z])-\s+(?=[a-z])', '', content)
+        list_content = content.split("\n")
+        set_content = set(list_content)
+        return ".\n".join(set_content)
 
-    async def _normalize_whitespace(self, data:str):
-        pass 
 
-    async def _validate_encoding(self, text:str):
-        pass 
 
-    async def content(self, raw_data:str):
-        pass 

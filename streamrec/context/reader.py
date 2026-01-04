@@ -2,14 +2,14 @@ import asyncio
 import io
 import re
 from typing import Any, Dict
-from streamrec.context.cleaner import Cleaner
+from streamrec.context.chunker import Chunker
+from streamrec.context.chunk import Document
 from streamrec.interface import Preprocessing, DataCollector
 from streamrec.types import DataCollectorConfig
 from datasets import load_dataset
 import magic
-from difflib import SequenceMatcher
 from fuzzywuzzy import fuzz
-
+from difflib import SequenceMatcher
 
     
 class Reader(Preprocessing):
@@ -22,7 +22,7 @@ class Reader(Preprocessing):
         self.name = "Reader"
         parent_config = self.config
         self.config = parent_config[self.name]
-        self.cleaners = Cleaner(config)
+        self.cleaners = Chunker(config)
 
 
     async def pipeline(self, 

@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from typing import Dict, Any
 
+from server.types import FileConfig
+from streamrec.context.chunk import create_document
 from streamrec.context.reader import Reader
 
 load_dotenv()
@@ -20,6 +22,16 @@ with open(config_path, 'r') as f:
 async def upload_document(uploaded_file: UploadFile = File(...)):
 
     file_ext = uploaded_file.filename.split('.')[-1] if '.' in uploaded_file.filename else ''
+    file_config = FileConfig(
+        filename = ,
+        extension= ,
+        labels= ,
+        allowed_roles=,
+        owner= ,
+        source= ,
+        file_size= ,
+        metadata = 
+    )
     metadata = {
         "file_name": uploaded_file.filename,
         "type": file_ext,
@@ -27,6 +39,7 @@ async def upload_document(uploaded_file: UploadFile = File(...)):
         "size_bytes": uploaded_file.size
     }
     cleaner = Reader(CONFIG)
+    doc = create_document()
     try:
         result = await cleaner.pipeline({
             "file": uploaded_file,

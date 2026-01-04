@@ -30,8 +30,11 @@
                     "big": 40000000
                 }
             },
-            "Cleaner": {
-
+            "Chunker": {
+                "cleaning": true,
+                "strategy": "Recursive",
+                "chunk_size":100,
+                "chunk_overlap":10
             }
         }
     }
