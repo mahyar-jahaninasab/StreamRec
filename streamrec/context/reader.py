@@ -3,13 +3,11 @@ import io
 import re
 from typing import Any, Dict
 from streamrec.context.chunker import Chunker
-from streamrec.context.chunk import Document
 from streamrec.interface import Preprocessing, DataCollector
 from streamrec.types import DataCollectorConfig
 from datasets import load_dataset
 import magic
 from fuzzywuzzy import fuzz
-from difflib import SequenceMatcher
 
     
 class Reader(Preprocessing):
@@ -23,35 +21,34 @@ class Reader(Preprocessing):
         parent_config = self.config
         self.config = parent_config[self.name]
         self.cleaners = Chunker(config)
+        self.metadata = None
 
 
     async def pipeline(self, 
                        data: Dict[str, Any]) -> Dict[str, Any]:
         uploaded_file = data.get('file')
-        metadata = data.get('metadata', {})
+        self.metadata  = data.get('metadata', {})
         content = await uploaded_file.read()
-        metadata['size'] = len(content)
-        await self._validate(content, metadata)
-        result = await self.parse_data(content, metadata)
+        self.metadata.file_size = len(content)
+        await self._validate(content)
+        result = await self.parse_data(content)
         return result 
     
     async def _validate(self, 
-                        content:bytes,
-                        metadata: Dict[str, Any]) -> None:
-        self._validate_structure(metadata)
+                        content:bytes) -> None:
+        self._validate_structure()
         self._validate_size(content)
-        self._validate_filename(metadata.get('file_name', ''))
-        self._validate_file_type(content, metadata.get('type', ''))
-        self._validate_metadata(metadata)    
+        self._validate_filename()
+        self._validate_file_type(content, self.metadata.extension
+                                 )
     
     async def parse_data(self,
-                         content:bytes,
-                         metadata: Dict[str, Any]) -> Dict[str, Any]:
-        file_type = metadata.get('type', '').lstrip('.')
+                         content:bytes) -> Dict[str, Any]:
+        file_type = self.metadata.extension
         extracted_data = await self._extract_content(content, file_type)
         return {
             "text": extracted_data,
-            "metadata": metadata, 
+            "extension": file_type, 
             "status": "success"
             }
 
@@ -105,6 +102,9 @@ class Reader(Preprocessing):
             
         return clean_pages
 
+    def get_config(self):
+        return self.metadata
+
 
     async def load_docx_file(self, 
                              file_stream: bytes) -> str:
@@ -128,12 +128,11 @@ class Reader(Preprocessing):
         main_text = "\n\n".join(self.cleaners.pipeline(p.text) for p in reader.paragraphs if p.text.strip())
         return main_text
     
-    def _validate_structure(self, 
-                            metadata: Dict) -> None:
+    def _validate_structure(self) -> None:
         
         required_keys = self.config["metadata"]["required_keys"]
         required_keys = set(required_keys)
-        provided_keys = set(metadata.keys())
+        provided_keys = set(self.metadata.model_dump(exclude_none=True).keys())
         if not required_keys.issubset(provided_keys):
             missing = required_keys - provided_keys
             raise ValueError(f"Missing metadata fields: {missing}")
@@ -174,14 +173,10 @@ class Reader(Preprocessing):
             raise ValueError(
                 f"File type mismatch: claimed '{extension}' "
                 f"but detected '{detected_mime}'"
-            )       
+            )
+               
         
-    def _validate_metadata(self, 
-                           metadata: Dict) -> None:
-        
-        if len(metadata) > self.config['limits']['max_metadata_fields']:
-            raise ValueError(f"Too many metadata fields (max {self.config['limits']['max_metadata_fields']})")
-    
+
 class HuggingFaceCollector(DataCollector):
     def __init__(self, config:Dict[str, Any]):
         super().__init__()

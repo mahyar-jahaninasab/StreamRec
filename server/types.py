@@ -9,11 +9,21 @@ class Status(str, Enum):
     EMBEDDING = "EMBEDDING"
     INJESTING = "INJESTING"
     RETRIVING = "RETRIVING"
-    ACCESS = "ACCESS"
+    ACCESS = "ALOWED"
     GENERATION = "GENERATION"
     DONE = "DONE"
     ERROR = "ERROR"
 
+class Roles(Enum):
+    ADMIN = "admin"
+    MANAGER = "manager"
+    USER = "user" 
+    GUEST = "guest"
+
+class User(BaseModel):
+    id: str 
+    username: str 
+    role: Roles 
 
 class FileConfig(BaseModel):
     fileID: str

@@ -1,7 +1,7 @@
 import json
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Form
 from typing import Dict, Any
 
 from server.types import FileConfig
@@ -21,23 +21,25 @@ with open(config_path, 'r') as f:
 @app.post("/api/upload")
 async def upload_document(uploaded_file: UploadFile = File(...)):
 
-    file_ext = uploaded_file.filename.split('.')[-1] if '.' in uploaded_file.filename else ''
-    file_config = FileConfig(
-        filename = ,
-        extension= ,
-        labels= ,
-        allowed_roles=,
-        owner= ,
-        source= ,
-        file_size= ,
-        metadata = 
-    )
+    file_extention = uploaded_file.filename.split('.')[-1] if '.' in uploaded_file.filename else ''
+    
+    # file_config = FileConfig(
+    #     filename = uploaded_file.filename,
+    #     extension= file_extention,
+    #     labels= "user_specific",
+    #     allowed_roles=user.role,
+    #     owner= user.self,
+    #     source= ,
+    #     file_size= None,
+    #     metadata = None
+    # )
     metadata = {
         "file_name": uploaded_file.filename,
-        "type": file_ext,
+        "type": file_extention,
         "content_type": uploaded_file.content_type,
         "size_bytes": uploaded_file.size
     }
+    # metadata = FileConfig
     cleaner = Reader(CONFIG)
     doc = create_document()
     try:
