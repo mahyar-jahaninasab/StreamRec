@@ -1,7 +1,7 @@
 import json
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Form, WebSocket
 from typing import Dict, Any
 
 from server.config import FileConfig
@@ -17,6 +17,24 @@ config_path = os.getenv("CONFIG_PATH")
 with open(config_path, 'r') as f:
     CONFIG = json.load(f)
     
+
+
+
+@app.get("/api/health")
+async def health_check():
+    pass 
+
+
+
+@app.websocket("/ws/generate_stream")
+async def websocket_generate_stream(websocket: WebSocket):
+    pass
+
+@app.get("/api/thread")
+async def threads():
+    pass
+
+
 
 @app.post("/api/upload")
 async def upload_document(uploaded_file: UploadFile = File(...)):
@@ -51,4 +69,41 @@ async def upload_document(uploaded_file: UploadFile = File(...)):
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
+
+
+
+### ADMIN
+
+
+@app.post("/api/reset")
+async def reset_streamrec():
+    pass
+
+@app.post("/api/get_meta")
+async def get_meta():
+    pass
+
+@app.post("/api/get_suggestions")
+async def get_suggestions():
+    pass
+
+@app.post("/api/get_all_suggestions")
+async def get_all_suggestions():
+    pass
+
+@app.post("/api/delete_suggestion")
+async def delete_suggestion():
+    pass
+
+@app.post("/api/delete_document")
+async def delete_document():
+    pass
+
+@app.post("/api/set_rag_config")
+async def update_rag_config():
+    pass
+
+@app.post("/api/get_rag_config")
+async def retrieve_rag_config():
+    pass
