@@ -1,5 +1,5 @@
 #chunk.py
-from server.types import FileConfig
+from server.config import FileConfig
 
 from dataclasses import dataclass, field, asdict
 from spacy.tokens import Doc, Span

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Form
 from typing import Dict, Any
 
-from server.types import FileConfig
+from server.config import FileConfig
 from streamrec.context.chunk import create_document
 from streamrec.context.reader import Reader
 

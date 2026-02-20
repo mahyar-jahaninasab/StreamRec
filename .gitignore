@@ -1,5 +1,7 @@
-venv/
+.venv/
 *.egg-info
 __pycache__
 test.py
 docs/
+.env
+dummy/
