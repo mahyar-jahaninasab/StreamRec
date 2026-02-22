@@ -47,8 +47,7 @@ class FileConfig(BaseModel):
 class AuthSetting(BaseSettings):
     secret_jwt: str 
     algorithm: str = "HS256"
-    access_token_expiery_minutes: int = 30
+    access_token_expiry_minutes: int = 30
     issuer: str 
     audience: str 
-    database_url: str = "..."
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

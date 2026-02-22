@@ -1,60 +1,62 @@
-from typing import Dict, Optional
-from starlette.concurrency import run_in_threadpool
-from fastapi import Request, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jwt import DecodeError, ExpiredSignatureError
-import jwt
-from server.config import AuthSetting
 
-settings = AuthSetting()
-                                                                                            
+import jwt
+from jwt.exceptions import InvalidIssuerError, InvalidAudienceError, ExpiredSignatureError, DecodeError
+
+from server.config import AuthSetting
+from server.auth.models import LoggedInUser
+from fastapi import  HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
+from starlette.requests import Request
+
+settings = AuthSetting() 
+
 class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
-        super(JWTBearer,self).__init__(auto_error=auto_error)
-        self.auto_error_user = auto_error
-    async def __call__(self,request:Request):
-        credentials: Optional[HTTPAuthorizationCredentials] = await super(JWTBearer, self).__call__(request)
+        super().__init__(auto_error=auto_error)
+
+    async def __call__(self, request: Request) -> LoggedInUser:
+        credentials: HTTPAuthorizationCredentials | None = await super().__call__(request)
         if not credentials:
-            if self.auto_error_user:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Invalid authorization code"
-                )
-            return None 
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",  
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         if credentials.scheme != "Bearer":
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, 
-                detail="Invalid authentication scheme."
+                status_code=status.HTTP_401_UNAUTHORIZED,  
+                detail="Invalid authentication scheme",
+                headers={"WWW-Authenticate": "Bearer"},
             )
         token = credentials.credentials
         try:
-            payload = run_in_threadpool(
+            payload = await run_in_threadpool(
                 jwt.decode,
-                token, 
+                token,
                 settings.secret_jwt,
-                issuer=settings.issuer,           
-                audience=settings.audience,   
+                issuer=settings.issuer,
+                audience=settings.audience,
                 algorithms=[settings.algorithm],
                 options={"require": ["exp", "iss", "aud"]},
             )
-            return payload
-        
-        except jwt.InvalidIssuerError:
-            raise HTTPException(401, "Invalid issuer")
-        except jwt.InvalidAudienceError: 
-            raise HTTPException(401, "Invalid audience")
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(401, "Token expired")
-        except jwt.DecodeError:
-            raise HTTPException(403, "Invalid token")
-        except ExpiredSignatureError:
-             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, 
-                detail="Token expired."
-            )
-        except DecodeError:
+            return LoggedInUser.model_validate(payload)  
+        except (InvalidIssuerError, InvalidAudienceError):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, 
-                detail="Invalid token."
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token claims",
+                headers={"WWW-Authenticate": "Bearer"},
             )
-
+        except ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token expired",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except (DecodeError, ValidationError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
